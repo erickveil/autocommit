@@ -83,7 +83,7 @@ generate_commit_message() {
 
     # Compose prompts
     SYSTEM_PROMPT="You are an assistant that writes concise and descriptive commit messages for git commits."
-    USER_PROMPT="Analyze the following git diff and write a clear, brief commit message summarizing the changes:\\n$diff_content"
+    USER_PROMPT="Analyze the following git diff and write a clear, brief commit message summarizing the changes. Start the commit with an appropriate emoji representing the change made instead of using a prefix like 'feat' or 'fix':\\n$diff_content"
 
     # Escape prompts for JSON
     SYSTEM_PROMPT_ESCAPED=$(escape_for_json "$SYSTEM_PROMPT")
