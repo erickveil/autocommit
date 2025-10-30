@@ -93,24 +93,21 @@ generate_commit_message() {
     # Truncate diff to MAX_DIFF_CHARS characters max
     diff_content=$(truncate_diff "$diff_content")
 
-    # Compose prompts
     SYSTEM_PROMPT="You are an assistant that writes concise and descriptive commit messages for git commits."
     USER_PROMPT="Analyze the following git diff and write a clear, brief commit message summarizing the changes. Start the commit with an appropriate emoji representing the change made instead of using a prefix like 'feat' or 'fix':\\n$diff_content"
 
-    # Escape prompts for JSON
     SYSTEM_PROMPT_ESCAPED=$(escape_for_json "$SYSTEM_PROMPT")
     USER_PROMPT_ESCAPED=$(escape_for_json "$USER_PROMPT")
 
-    # Build JSON payload
     read -r -d '' PAYLOAD <<EOF
 {
-  "model": "$OLLAMA_MODEL",
-  "temperature": $OLLAMA_TEMP,
-  "stream": false,
-  "messages": [
-    {"role": "system", "content": "$SYSTEM_PROMPT_ESCAPED"},
-    {"role": "user", "content": "$USER_PROMPT_ESCAPED"}
-  ]
+      "model": "$OLLAMA_MODEL",
+      "temperature": $OLLAMA_TEMP,
+      "stream": false,
+      "messages": [
+        {"role": "system", "content": "$SYSTEM_PROMPT_ESCAPED"},
+        {"role": "user", "content": "$USER_PROMPT_ESCAPED"}
+      ]
 }
 EOF
 
@@ -121,7 +118,6 @@ EOF
     fi
 
     RESPONSE=$(curl -s "$OLLAMA_URL" -H "Content-Type: application/json" -d "$PAYLOAD")
-    # If there's an error in the response, print it even if not in verbose mode
     ERROR_MSG=$(echo "$RESPONSE" | grep -o '"error":"[^"]*"' | sed 's/"error":"//;s/"$//')
     if [ -n "$ERROR_MSG" ]; then
         log "Ollama error: $ERROR_MSG"
@@ -133,9 +129,11 @@ EOF
     # Extract message.content using sed (inside the "message" object)
     COMMIT_MSG=$(echo "$RESPONSE" | sed -n 's/.*"message":{[^}]*"content":"\([^"]*\)".*/\1/p')
     log "Commit msg after extraction: $COMMIT_MSG"
-    
-    # Convert literal \n to actual newlines
-    COMMIT_MSG=$(echo "$COMMIT_MSG" | sed 's/\\n/\/g')
+
+    # Convert literal \n to actual newlines (fix: type Enter after first /)
+    COMMIT_MSG=$(printf "%s" "$COMMIT_MSG" | sed 's/\\n/
+\
+/g')
     log "Commit msg after newline conversion: $COMMIT_MSG"
 
     if [ -z "$COMMIT_MSG" ]; then
