@@ -12,7 +12,6 @@ OLLAMA_URL="http://192.168.0.160:11434/api/chat"
 OLLAMA_MODEL="gemma3:latest"
 OLLAMA_TEMP="1.0"
 DEFAULT_INTERVAL_MINUTES=30
-MAX_DIFF_CHARS=8000  # Maximum number of characters from git diff sent to Ollama
 
 # Parse options
 VERBOSE=0
@@ -56,7 +55,6 @@ log "Starting auto-commit AI script."
 log "AI model: $OLLAMA_MODEL"
 log "Ollama endpoint: $OLLAMA_URL"
 log "Commit interval: $INTERVAL_MINUTES minute(s)"
-log "Max diff length sent to Ollama: $MAX_DIFF_CHARS characters"
 if [ "$VERBOSE" -eq 1 ]; then
     log "Verbose mode enabled."
 fi
@@ -64,13 +62,6 @@ fi
 # Escape double quotes, backslashes, and newlines for JSON
 escape_for_json() {
     echo "$1" | sed ':a;N;$!ba;s/\\/\\\\/g;s/"/\\"/g;s/\n/\\n/g'
-}
-
-# Truncate the diff content to a safe length (max $MAX_DIFF_CHARS characters)
-truncate_diff() {
-    # Usage: truncate_diff "$diff_content"
-    # awk substr() counts bytes, not characters, but is safe for ASCII.
-    echo "$1" | awk -v max="$MAX_DIFF_CHARS" '{out=out $0 "\n"} END {print substr(out,1,max)}'
 }
 
 # Function to get an AI-generated commit message based on git diff
@@ -89,9 +80,6 @@ generate_commit_message() {
         echo "Automated commit"
         return
     fi
-
-    # Truncate diff to MAX_DIFF_CHARS characters max
-    diff_content=$(truncate_diff "$diff_content")
 
     # Compose prompts
     SYSTEM_PROMPT="You are an assistant that writes concise and descriptive commit messages for git commits."
