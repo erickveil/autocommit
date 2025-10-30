@@ -63,7 +63,7 @@ fi
 
 # Escape double quotes, backslashes, and newlines for JSON
 escape_for_json() {
-    echo "$1" | sed ':a;N;$!ba;s/\\/\\\\/g;s/"/\\"/g;s/\n/\\n/g'
+    echo "$1" | sed ':a;N;$!ba;s/\\/\\\\/g;s/"/\\"/g;s/\t/\\t/g;s/\n/\\n/g'
 }
 
 # Truncate the diff content to a safe length (max $MAX_DIFF_CHARS characters)
