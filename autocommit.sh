@@ -141,9 +141,8 @@ EOF
     log "Commit msg after extraction: $COMMIT_MSG"
     
     # Convert literal \n to actual newlines
-    COMMIT_MSG=$(printf "%s" "$COMMIT_MSG" | sed 's/\\n/
-\
-/g')
+    COMMIT_MSG=$(printf "%s" "$COMMIT_MSG" | sed "s/\\\\n/\
+/g")
     log "Commit msg after newline conversion: $COMMIT_MSG"
 
     if [ -z "$COMMIT_MSG" ]; then
