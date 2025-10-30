@@ -121,11 +121,6 @@ EOF
     fi
 
     RESPONSE=$(curl -s "$OLLAMA_URL" -H "Content-Type: application/json" -d "$PAYLOAD")
-    # If there's an error in the response, print it even if not in verbose mode
-    ERROR_MSG=$(echo "$RESPONSE" | grep -o '"error":"[^"]*"' | sed 's/"error":"//;s/"$//')
-    if [ -n "$ERROR_MSG" ]; then
-        log "Ollama error: $ERROR_MSG"
-    fi
     if [ "$VERBOSE" -eq 1 ]; then
         log "Ollama raw response: $RESPONSE"
     fi
