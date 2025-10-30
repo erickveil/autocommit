@@ -1,19 +1,44 @@
 #!/bin/bash
 
-# Script to automatically add all changes and commit every 30 minutes,
+# Script to automatically add all changes and commit at a set interval,
 # using Ollama to generate commit messages based on git diff.
 # Verbose output; NO jq dependency.
-# Add -v for extra verbosity to show commands being run.
+# Usage:
+#   ./auto-commit-ai.sh [-v] [-i INTERVAL_MINUTES]
+#   -v: verbose output (shows commands being run)
+#   -i: set interval in minutes between automated commits (default: 30)
 
 OLLAMA_URL="http://192.168.0.160:11434/api/chat"
 OLLAMA_MODEL="gemma3:latest"
 OLLAMA_TEMP="1.0"
+DEFAULT_INTERVAL_MINUTES=30
 
+# Parse options
 VERBOSE=0
-if [ "$1" = "-v" ]; then
-    VERBOSE=1
-    shift
-fi
+INTERVAL_MINUTES=$DEFAULT_INTERVAL_MINUTES
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -v)
+            VERBOSE=1
+            shift
+            ;;
+        -i)
+            shift
+            if [[ "$1" =~ ^[0-9]+$ ]]; then
+                INTERVAL_MINUTES=$1
+                shift
+            else
+                echo "Error: -i requires an integer argument (number of minutes)" >&2
+                exit 1
+            fi
+            ;;
+        *)
+            echo "Usage: $0 [-v] [-i INTERVAL_MINUTES]" >&2
+            exit 1
+            ;;
+    esac
+done
 
 log() {
     echo "[$(date)] $*" >&2
@@ -29,6 +54,7 @@ run_cmd() {
 log "Starting auto-commit AI script."
 log "AI model: $OLLAMA_MODEL"
 log "Ollama endpoint: $OLLAMA_URL"
+log "Commit interval: $INTERVAL_MINUTES minute(s)"
 if [ "$VERBOSE" -eq 1 ]; then
     log "Verbose mode enabled."
 fi
@@ -117,7 +143,7 @@ auto_commit() {
 auto_commit
 
 while true; do
-    log "Sleeping for 30 minutes..."
-    sleep 1800
+    log "Sleeping for $INTERVAL_MINUTES minute(s)..."
+    sleep $((INTERVAL_MINUTES * 60))
     auto_commit
 done
