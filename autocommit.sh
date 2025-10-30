@@ -16,7 +16,7 @@ if [ "$1" = "-v" ]; then
 fi
 
 log() {
-    echo "[$(date)] $*"
+    echo "[$(date)] $*" >&2
 }
 
 run_cmd() {
@@ -33,7 +33,7 @@ if [ "$VERBOSE" -eq 1 ]; then
     log "Verbose mode enabled."
 fi
 
-# Function to escape double quotes, backslashes, and newlines for JSON
+# Escape double quotes, backslashes, and newlines for JSON
 escape_for_json() {
     echo "$1" | sed ':a;N;$!ba;s/\\/\\\\/g;s/"/\\"/g;s/\n/\\n/g'
 }
@@ -57,13 +57,13 @@ generate_commit_message() {
 
     # Compose prompts
     SYSTEM_PROMPT="You are an assistant that writes concise and descriptive commit messages for git commits."
-    USER_PROMPT="Analyze the following git diff and write a clear, brief commit message summarizing the changes:\n$diff_content"
+    USER_PROMPT="Analyze the following git diff and write a clear, brief commit message summarizing the changes:\\n$diff_content"
 
     # Escape prompts for JSON
     SYSTEM_PROMPT_ESCAPED=$(escape_for_json "$SYSTEM_PROMPT")
     USER_PROMPT_ESCAPED=$(escape_for_json "$USER_PROMPT")
 
-    # Manually build JSON payload
+    # Build JSON payload
     read -r -d '' PAYLOAD <<EOF
 {
   "model": "$OLLAMA_MODEL",
@@ -82,29 +82,24 @@ EOF
         log "Payload: $PAYLOAD"
     fi
 
-    # Make the API call and grab the output message
-    RESPONSE=$(curl -s "$OLLAMA_URL" \
-        -H "Content-Type: application/json" \
-        -d "$PAYLOAD")
-
+    RESPONSE=$(curl -s "$OLLAMA_URL" -H "Content-Type: application/json" -d "$PAYLOAD")
     if [ "$VERBOSE" -eq 1 ]; then
         log "Ollama raw response: $RESPONSE"
     fi
 
-    # Extract the message content from the JSON response
+    # Extract only the message content from the JSON response
     COMMIT_MSG=$(echo "$RESPONSE" | grep -o '"content":"[^"]*"' | head -n 1 | sed 's/"content":"//;s/"$//')
 
-    # Fallback if empty
     if [ -z "$COMMIT_MSG" ]; then
         log "AI did not generate a commit message. Using fallback."
         COMMIT_MSG="Automated commit"
     fi
 
     log "Generated commit message: $COMMIT_MSG"
+    # Only echo the commit message to stdout for use
     echo "$COMMIT_MSG"
 }
 
-# Function to add and commit all changes
 auto_commit() {
     run_cmd "git add -A"
 
@@ -119,12 +114,10 @@ auto_commit() {
     fi
 }
 
-# Initial commit when script is run
 auto_commit
 
-# Loop to commit every 30 minutes
 while true; do
     log "Sleeping for 30 minutes..."
-    sleep 1800  # 30 minutes
+    sleep 1800
     auto_commit
 done
