@@ -116,13 +116,16 @@ EOF
     # Extract only the message content from the JSON response
     COMMIT_MSG=$(echo "$RESPONSE" | grep -o '"content":"[^"]*"' | head -n 1 | sed 's/"content":"//;s/"$//')
 
+    # Convert literal \n to actual newlines
+    COMMIT_MSG=$(echo "$COMMIT_MSG" | sed 's/\\n/\
+/g')
+
     if [ -z "$COMMIT_MSG" ]; then
         log "AI did not generate a commit message. Using fallback."
         COMMIT_MSG="Automated commit"
     fi
 
     log "Generated commit message: $COMMIT_MSG"
-    # Only echo the commit message to stdout for use
     echo "$COMMIT_MSG"
 }
 
