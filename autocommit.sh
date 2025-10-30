@@ -146,7 +146,8 @@ EOF
     log "Commit msg after newline conversion: $COMMIT_MSG"
 
     if [ -z "$COMMIT_MSG" ]; then
-        log "AI did not generate a commit message. Using fallback."
+        log "AI did not generate a valid commit message. Using fallback."
+        log "AI Actual Response: $RESPONSE"
         COMMIT_MSG="Automated commit"
     fi
 
