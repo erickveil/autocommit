@@ -1,16 +1,22 @@
 #!/bin/bash
 
 # Script to automatically add all changes and commit every 30 minutes,
-# using an AI (Ollama) instance to generate commit messages based on git diff.
-# Verbose output included.
+# using Ollama to generate commit messages based on git diff.
+# Verbose output; NO jq dependency.
 
 OLLAMA_URL="http://192.168.0.160:11434/api/chat"
 OLLAMA_MODEL="gemma3:latest"
-OLLAMA_TEMP=1.0
+OLLAMA_TEMP="1.0"
 
 echo "[$(date)] Starting auto-commit AI script."
 echo "AI model: $OLLAMA_MODEL"
 echo "Ollama endpoint: $OLLAMA_URL"
+
+# Function to escape double quotes and backslashes in the diff
+escape_for_json() {
+    # Replace backslash with double-backslash, then double quote with escaped quote
+    echo "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
+}
 
 # Function to get an AI-generated commit message based on git diff
 generate_commit_message() {
@@ -29,27 +35,37 @@ generate_commit_message() {
         return
     fi
 
-    # System and user prompts for Ollama
+    # Compose prompts
     SYSTEM_PROMPT="You are an assistant that writes concise and descriptive commit messages for git commits."
     USER_PROMPT="Analyze the following git diff and write a clear, brief commit message summarizing the changes:\n$diff_content"
 
-    # Compose the JSON payload
-    PAYLOAD=$(jq -nc --arg sys "$SYSTEM_PROMPT" --arg user "$USER_PROMPT" --arg model "$OLLAMA_MODEL" --argjson temp $OLLAMA_TEMP '{
-      model: $model,
-      temperature: $temp,
-      stream: false,
-      messages: [
-        {role: "system", content: $sys},
-        {role: "user", content: $user}
-      ]
-    }')
+    # Escape prompts for JSON
+    SYSTEM_PROMPT_ESCAPED=$(escape_for_json "$SYSTEM_PROMPT")
+    USER_PROMPT_ESCAPED=$(escape_for_json "$USER_PROMPT")
+
+    # Manually build JSON payload
+    read -r -d '' PAYLOAD <<EOF
+{
+  "model": "$OLLAMA_MODEL",
+  "temperature": $OLLAMA_TEMP,
+  "stream": false,
+  "messages": [
+    {"role": "system", "content": "$SYSTEM_PROMPT_ESCAPED"},
+    {"role": "user", "content": "$USER_PROMPT_ESCAPED"}
+  ]
+}
+EOF
 
     echo "[$(date)] Requesting AI commit message from Ollama..."
 
     # Make the API call and grab the output message
-    COMMIT_MSG=$(curl -s "$OLLAMA_URL" \
+    RESPONSE=$(curl -s "$OLLAMA_URL" \
         -H "Content-Type: application/json" \
-        -d "$PAYLOAD" | jq -r '.message.content')
+        -d "$PAYLOAD")
+
+    # Extract the message content from the JSON response
+    # This assumes the response contains: "content": "your message here"
+    COMMIT_MSG=$(echo "$RESPONSE" | grep -o '"content":"[^"]*"' | head -n 1 | sed 's/"content":"//;s/"$//')
 
     # Fallback if empty
     if [ -z "$COMMIT_MSG" ]; then
