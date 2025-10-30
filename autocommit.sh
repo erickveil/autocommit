@@ -33,10 +33,9 @@ if [ "$VERBOSE" -eq 1 ]; then
     log "Verbose mode enabled."
 fi
 
-# Function to escape double quotes and backslashes in the diff
+# Function to escape double quotes, backslashes, and newlines for JSON
 escape_for_json() {
-    # Replace backslash with double-backslash, then double quote with escaped quote
-    echo "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
+    echo "$1" | sed ':a;N;$!ba;s/\\/\\\\/g;s/"/\\"/g;s/\n/\\n/g'
 }
 
 # Function to get an AI-generated commit message based on git diff
@@ -93,7 +92,6 @@ EOF
     fi
 
     # Extract the message content from the JSON response
-    # This assumes the response contains: "content": "your message here"
     COMMIT_MSG=$(echo "$RESPONSE" | grep -o '"content":"[^"]*"' | head -n 1 | sed 's/"content":"//;s/"$//')
 
     # Fallback if empty
