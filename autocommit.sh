@@ -11,7 +11,7 @@
 OLLAMA_URL="http://192.168.0.160:11434/api/chat"
 OLLAMA_MODEL="gemma3:latest"
 OLLAMA_TEMP="1.0"
-DEFAULT_INTERVAL_MINUTES=30
+DEFAULT_INTERVAL_MINUTES=15
 MAX_DIFF_CHARS=8000  # Maximum number of characters from git diff sent to Ollama
 
 # Parse options
