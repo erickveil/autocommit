@@ -131,7 +131,13 @@ EOF
     fi
 
     # Extract message.content using sed (inside the "message" object)
-    COMMIT_MSG=$(echo "$RESPONSE" | grep -o '"content":"[^"]*"' | head -n1 | sed 's/"content":"//')
+    COMMIT_MSG=$(printf "%s" "$RESPONSE" | grep -o '"content":"[^"]*"' | head -n1 | sed 's/"content":"//')
+
+    if [ -z "$COMMIT_MSG" ]; then
+        # Fallback: crude multiline extraction
+        log "Fallback to multiline extraction"
+        COMMIT_MSG=$(printf "%s" "$RESPONSE" | awk 'BEGIN{RS="";FS="\"content\":\""} NF>1 {split($2,a,"\""); print a[1]}')
+    fi
     log "Commit msg after extraction: $COMMIT_MSG"
     
     # Convert literal \n to actual newlines
