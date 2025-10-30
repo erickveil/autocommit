@@ -3,14 +3,35 @@
 # Script to automatically add all changes and commit every 30 minutes,
 # using Ollama to generate commit messages based on git diff.
 # Verbose output; NO jq dependency.
+# Add -v for extra verbosity to show commands being run.
 
 OLLAMA_URL="http://192.168.0.160:11434/api/chat"
 OLLAMA_MODEL="gemma3:latest"
 OLLAMA_TEMP="1.0"
 
-echo "[$(date)] Starting auto-commit AI script."
-echo "AI model: $OLLAMA_MODEL"
-echo "Ollama endpoint: $OLLAMA_URL"
+VERBOSE=0
+if [ "$1" = "-v" ]; then
+    VERBOSE=1
+    shift
+fi
+
+log() {
+    echo "[$(date)] $*"
+}
+
+run_cmd() {
+    if [ "$VERBOSE" -eq 1 ]; then
+        log "Running command: $*"
+    fi
+    eval "$@"
+}
+
+log "Starting auto-commit AI script."
+log "AI model: $OLLAMA_MODEL"
+log "Ollama endpoint: $OLLAMA_URL"
+if [ "$VERBOSE" -eq 1 ]; then
+    log "Verbose mode enabled."
+fi
 
 # Function to escape double quotes and backslashes in the diff
 escape_for_json() {
@@ -30,7 +51,7 @@ generate_commit_message() {
 
     # If still empty, fallback message
     if [ -z "$diff_content" ]; then
-        echo "No changes detected for commit message generation."
+        log "No changes detected for commit message generation."
         echo "Automated commit"
         return
     fi
@@ -56,12 +77,20 @@ generate_commit_message() {
 }
 EOF
 
-    echo "[$(date)] Requesting AI commit message from Ollama..."
+    log "Requesting AI commit message from Ollama..."
+    if [ "$VERBOSE" -eq 1 ]; then
+        log "curl -s \"$OLLAMA_URL\" -H \"Content-Type: application/json\" -d \"\$PAYLOAD\""
+        log "Payload: $PAYLOAD"
+    fi
 
     # Make the API call and grab the output message
     RESPONSE=$(curl -s "$OLLAMA_URL" \
         -H "Content-Type: application/json" \
         -d "$PAYLOAD")
+
+    if [ "$VERBOSE" -eq 1 ]; then
+        log "Ollama raw response: $RESPONSE"
+    fi
 
     # Extract the message content from the JSON response
     # This assumes the response contains: "content": "your message here"
@@ -69,27 +98,26 @@ EOF
 
     # Fallback if empty
     if [ -z "$COMMIT_MSG" ]; then
-        echo "AI did not generate a commit message. Using fallback."
+        log "AI did not generate a commit message. Using fallback."
         COMMIT_MSG="Automated commit"
     fi
 
-    echo "[$(date)] Generated commit message: $COMMIT_MSG"
+    log "Generated commit message: $COMMIT_MSG"
     echo "$COMMIT_MSG"
 }
 
 # Function to add and commit all changes
 auto_commit() {
-    echo "[$(date)] Running: git add -A"
-    git add -A
+    run_cmd "git add -A"
 
-    echo "[$(date)] Checking for staged changes..."
+    log "Checking for staged changes..."
     if ! git diff --cached --quiet; then
         COMMIT_MSG=$(generate_commit_message)
-        echo "[$(date)] Changes detected. Committing..."
-        git commit -m "$COMMIT_MSG"
-        echo "[$(date)] Commit successful."
+        log "Changes detected. Committing..."
+        run_cmd "git commit -m \"\$COMMIT_MSG\""
+        log "Commit successful."
     else
-        echo "[$(date)] No changes to commit."
+        log "No changes to commit."
     fi
 }
 
@@ -98,7 +126,7 @@ auto_commit
 
 # Loop to commit every 30 minutes
 while true; do
-    echo "[$(date)] Sleeping for 30 minutes..."
+    log "Sleeping for 30 minutes..."
     sleep 1800  # 30 minutes
     auto_commit
 done
