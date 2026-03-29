@@ -14,7 +14,8 @@ import (
 
 const (
 	OLLAMA_URL   = "http://127.0.0.1:11434/api/chat"
-	OLLAMA_MODEL = "gemma3:latest"
+	//OLLAMA_MODEL = "gemma3:latest"
+	OLLAMA_MODEL = "minimax-m2.5:cloud"
 	OLLAMA_TEMP  = 1.0
 	MAX_DIFF_LEN = 8000
 )
